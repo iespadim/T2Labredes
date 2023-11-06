@@ -28,6 +28,3 @@ realizados, será necessário apresentar as seguintes informações no terminal:
 - Quantidade de pacotes ICMPv6
 - Nível de Transporte
 - Quantidade de pacotes UDP
-- Quantidade de pacotes TCP
-
-- 
