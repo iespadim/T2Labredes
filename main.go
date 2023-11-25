@@ -19,6 +19,7 @@ type NetworkStatistics struct {
 	ipv6Count       int
 	arpRequestCount int
 	arpReplyCount   int
+	synCount        int
 }
 
 func main() {
@@ -57,8 +58,38 @@ func processPacket(packet gopacket.Packet, networkStats *NetworkStatistics) {
 			if arp.Operation == 2 {
 				networkStats.arpReplyCount++
 			}
+		case layers.LayerTypeTCP:
+			tcpLayer := packet.Layer(layers.LayerTypeTCP)
+			tcp, _ := tcpLayer.(*layers.TCP)
+			if tcp.SYN {
+				networkStats.synCount++
+			}
 		}
 	}
+
+	// Verifique e imprima estatísticas de ataque
+	if networkStats.detectDosAttack() {
+		fmt.Println("Ataque DoS detectado!")
+
+	}
+
+	if networkStats.detectSynFloodAttack() {
+		fmt.Println("Ataque SYN Flood detectado!")
+		// Adicione lógica adicional conforme necessário
+	}
+}
+
+// Adicione métodos de detecção de ataque à struct NetworkStatistics
+func (ns *NetworkStatistics) detectDosAttack() bool {
+	// Lógica de detecção de ataque DoS
+	// Exemplo: Se o número total de pacotes exceder um limite em um curto período de tempo, considere como um ataque DoS.
+	return false
+}
+
+func (ns *NetworkStatistics) detectSynFloodAttack() bool {
+	// Lógica de detecção de ataque SYN Flood
+	// Exemplo: Se a taxa de pacotes SYN for anormalmente alta, considere como um ataque SYN Flood.
+	return ns.synCount > 100 // Ajuste o limite conforme necessário
 }
 
 func printCliUI(networkStats *NetworkStatistics) {

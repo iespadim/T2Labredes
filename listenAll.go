@@ -9,7 +9,7 @@ import (
 
 // ListenAll é uma função que ouve pacotes
 func ListenAll(networkStats *NetworkStatistics) {
-	handle, err := pcap.OpenLive("ens33", 1600, true, pcap.BlockForever)
+	handle, err := pcap.OpenLive("eth0", 1600, true, pcap.BlockForever)
 	if err != nil {
 		log.Fatal(err)
 	}
