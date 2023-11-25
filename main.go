@@ -20,6 +20,7 @@ type NetworkStatistics struct {
 	arpRequestCount int
 	arpReplyCount   int
 	synCount        int
+	lastSynTime     time.Time
 }
 
 func main() {
@@ -81,15 +82,34 @@ func processPacket(packet gopacket.Packet, networkStats *NetworkStatistics) {
 
 // Adicione métodos de detecção de ataque à struct NetworkStatistics
 func (ns *NetworkStatistics) detectDosAttack() bool {
-	// Lógica de detecção de ataque DoS
-	// Exemplo: Se o número total de pacotes exceder um limite em um curto período de tempo, considere como um ataque DoS.
+	// Regra: Se o número total de pacotes exceder um limite em um curto período de tempo, considere como um ataque DoS.
+	maxPacketsPerSecond := 1000
+
+	currentTime := time.Now()
+	packetsPerSecond := float64(ns.getTotalPackets()) / currentTime.Sub(ns.lastSynTime).Seconds()
+
+	if packetsPerSecond > float64(maxPacketsPerSecond) {
+		return true
+	}
 	return false
 }
 
 func (ns *NetworkStatistics) detectSynFloodAttack() bool {
-	// Lógica de detecção de ataque SYN Flood
-	// Exemplo: Se a taxa de pacotes SYN for anormalmente alta, considere como um ataque SYN Flood.
-	return ns.synCount > 100 // Ajuste o limite conforme necessário
+	// Regra: Se a taxa de pacotes SYN for anormalmente alta, considere como um ataque SYN Flood.
+	maxSynRate := 100 // Ajuste conforme necessário
+
+	currentTime := time.Now()
+	synRate := float64(ns.synCount) / currentTime.Sub(ns.lastSynTime).Seconds()
+
+	if synRate > float64(maxSynRate) {
+		return true
+	}
+	return false
+}
+
+// Método auxiliar para obter o número total de pacotes
+func (ns *NetworkStatistics) getTotalPackets() int {
+	return ns.icmpv4Count + ns.icmpv6Count + ns.ipv4Count + ns.ipv6Count + ns.arpRequestCount + ns.arpReplyCount + ns.synCount
 }
 
 func printCliUI(networkStats *NetworkStatistics) {
