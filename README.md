@@ -1,3 +1,6 @@
+sudo /usr/local/go/bin/go run main.go listenAll.go
+
+
 # T2Labredes
 
 O trabalho consiste em duas partes:

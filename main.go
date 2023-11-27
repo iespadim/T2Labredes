@@ -2,45 +2,47 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"os"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcapgo"
 )
 
-// Quantidade de pacotes IPv4
-// - Quantidade de pacotes ICMP
-// - Quantidade de pacotes IPv6
-// - Quantidade de pacotes ICMPv6
-type NetworkStatistics struct {
-	icmpv4Count     int
-	icmpv6Count     int
-	ipv4Count       int
-	ipv6Count       int
-	arpRequestCount int
-	arpReplyCount   int
-	synCount        int
-	lastSynTime     time.Time
-	DDos            string
-	synFlood        string
+type Config struct {
+	iface      string
+	pcapOut    string
+	enableAF   bool
+	pcapFile   *os.File
+	pcapWriter *pcapgo.Writer
+	sniffer    Sniffer
+	isRunning  bool
 }
 
 func main() {
+	iface := "eth0"
+	networkStats := GetStatisticsInstance()
+	config := &Config{
+		iface:      iface,
+		pcapOut:    "out.pcap",
+		enableAF:   false,
+		pcapFile:   nil,
+		pcapWriter: nil,
+		sniffer:    nil,
+		isRunning:  false,
+	}
+
 	// Crie uma instância de NetworkStatistics
-	networkStats := &NetworkStatistics{}
 
 	// Inicie a goroutine para ouvir pacotes
 	go printCliUI(networkStats)
-
-	go ListenAll(networkStats)
-
-	// Adicione qualquer outra lógica principal aqui
+	go Listen(iface, networkStats, config)
 
 	// Mantenha o programa em execução
 	select {}
 }
 
-func processPacket(packet gopacket.Packet, networkStats *NetworkStatistics) {
+func ProcessPacket(packet gopacket.Packet, networkStats *NetworkStatistics) {
 	networkLayer := packet.NetworkLayer()
 	if networkLayer != nil {
 		switch networkLayer.LayerType() {
@@ -81,55 +83,4 @@ func processPacket(packet gopacket.Packet, networkStats *NetworkStatistics) {
 		fmt.Println("Ataque SYN Flood detectado!")
 		networkStats.synFlood = "ataque syn"
 	}
-}
-
-// Adicione métodos de detecção de ataque à struct NetworkStatistics
-func (ns *NetworkStatistics) detectDosAttack() bool {
-	// Regra: Se o número total de pacotes exceder um limite em um curto período de tempo, considere como um ataque DoS.
-	maxPacketsPerSecond := 100
-
-	currentTime := time.Now()
-	packetsPerSecond := float64(ns.getTotalPackets()) / currentTime.Sub(ns.lastSynTime).Seconds()
-
-	if packetsPerSecond > float64(maxPacketsPerSecond) {
-		return true
-	}
-	return false
-}
-
-func (ns *NetworkStatistics) detectSynFloodAttack() bool {
-	// Regra: Se a taxa de pacotes SYN for anormalmente alta, considere como um ataque SYN Flood.
-	maxSynRate := 10 // Ajuste conforme necessário
-
-	currentTime := time.Now()
-	synRate := float64(ns.synCount) / currentTime.Sub(ns.lastSynTime).Seconds()
-
-	if synRate > float64(maxSynRate) {
-		return true
-	}
-	return false
-}
-
-// Método auxiliar para obter o número total de pacotes
-func (ns *NetworkStatistics) getTotalPackets() int {
-	return ns.icmpv4Count + ns.icmpv6Count + ns.ipv4Count + ns.ipv6Count + ns.arpRequestCount + ns.arpReplyCount + ns.synCount
-}
-
-func printCliUI(networkStats *NetworkStatistics) {
-	//will print and refresh values on screen of network statistics from the networkStats struct
-	for {
-		fmt.Println("\033[H\033[2J")
-		fmt.Println("ICMPv4: ", networkStats.icmpv4Count)
-		fmt.Println("ICMPv6: ", networkStats.icmpv6Count)
-		fmt.Println("IPv4: ", networkStats.ipv4Count)
-		fmt.Println("IPv6: ", networkStats.ipv6Count)
-		fmt.Println("ARP: ", networkStats.arpRequestCount)
-		fmt.Println("ARP: ", networkStats.arpReplyCount)
-
-		fmt.Println("  ", networkStats.DDos)
-		fmt.Println("  ", networkStats.synFlood)
-
-		time.Sleep(1 * time.Second)
-	}
-
 }
